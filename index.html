@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEXUS PHOENIX — Event Schedule</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#06070d;
+    --bg-panel:#0d0f1e;
+    --bg-panel-alt:#12142a;
+    --border:#22243f;
+    --border-soft:#1a1c34;
+    --text:#e9eaf6;
+    --text-dim:#7d80a3;
+    --text-faint:#4d5075;
+
+    --c-capital:#ff2f6d;
+    --c-droid:#ffb32e;
+    --c-silo:#9b6bff;
+    --c-resource:#35d6e0;
+    --c-supply:#2fe6a0;
+    --neutral:#6b6f95;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(ellipse at 20% -10%, #1a1042 0%, transparent 45%),
+      radial-gradient(ellipse at 100% 0%, #0a1a3a 0%, transparent 40%),
+      var(--bg);
+    color:var(--text);
+    font-family:'Chakra Petch',sans-serif;
+    min-height:100vh;
+    padding:18px 14px 60px;
+  }
+
+  .mono{font-family:'JetBrains Mono',monospace;}
+
+  /* ---------- MODAL ---------- */
+  .modal-overlay{
+    position:fixed;inset:0;background:rgba(4,5,10,.86);
+    backdrop-filter:blur(4px);
+    display:flex;align-items:center;justify-content:center;
+    z-index:100;padding:18px;
+  }
+  .modal-overlay.hide{display:none;}
+  .modal{
+    width:100%;max-width:400px;
+    background:var(--bg-panel);
+    border:1px solid var(--border);
+    border-radius:16px;
+    padding:22px 20px;
+    box-shadow:0 20px 60px -20px rgba(0,0,0,.7);
+  }
+  .modal .eyebrow-m{
+    font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.2em;
+    color:var(--c-resource);margin-bottom:8px;
+  }
+  .modal h2{margin:0 0 6px;font-size:20px;letter-spacing:.01em;}
+  .modal p{margin:0 0 16px;font-size:12.5px;color:var(--text-dim);line-height:1.5;}
+  .detect-card{
+    background:linear-gradient(180deg, rgba(53,214,224,.12), rgba(53,214,224,.03));
+    border:1px solid rgba(53,214,224,.4);
+    border-radius:12px;padding:13px 14px;
+    margin-bottom:14px;cursor:pointer;
+    transition:.15s;
+  }
+  .detect-card:hover{border-color:var(--c-resource);}
+  .detect-card .dc-label{font-size:10.5px;letter-spacing:.1em;color:#8ff0f7;font-family:'JetBrains Mono',monospace;margin-bottom:4px;}
+  .detect-card .dc-value{font-size:16px;font-weight:700;color:#fff;}
+  .or-sep{
+    display:flex;align-items:center;gap:10px;
+    color:var(--text-faint);font-size:11px;margin:14px 0 10px;
+  }
+  .or-sep::before,.or-sep::after{content:"";flex:1;height:1px;background:var(--border-soft);}
+  select{
+    width:100%;background:var(--bg-panel-alt);
+    border:1px solid var(--border-soft);color:var(--text);
+    padding:11px 12px;border-radius:9px;font-size:13.5px;
+    font-family:'Chakra Petch',sans-serif;
+    margin-bottom:12px;
+  }
+  .btn-confirm{
+    width:100%;padding:12px;border:none;border-radius:10px;
+    background:linear-gradient(90deg,var(--c-capital),#ff6b93);
+    color:#fff;font-weight:700;font-size:14px;letter-spacing:.03em;
+    cursor:pointer;font-family:'Chakra Petch',sans-serif;
+    text-transform:uppercase;
+  }
+
+  .tz-fab{
+    position:fixed;top:16px;right:16px;z-index:40;
+    width:38px;height:38px;border-radius:50%;
+    background:var(--bg-panel);border:1px solid var(--border);
+    display:flex;align-items:center;justify-content:center;
+    font-size:16px;cursor:pointer;
+  }
+
+  /* ---------- HEADER ---------- */
+  .header{max-width:920px;margin:0 auto 20px;}
+  .eyebrow{
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;
+    letter-spacing:.25em;
+    color:var(--c-capital);
+    display:flex;align-items:center;gap:8px;
+    margin-bottom:10px;
+  }
+  .eyebrow::before{
+    content:"";width:7px;height:7px;background:var(--c-capital);
+    box-shadow:0 0 10px var(--c-capital);
+    animation:pulse 1.8s infinite ease-in-out;
+  }
+  @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(.7);}}
+
+  h1{
+    font-size:clamp(28px,7vw,44px);
+    line-height:1;
+    margin:0 0 6px;
+    letter-spacing:.01em;
+    text-transform:uppercase;
+    font-weight:700;
+  }
+  h1 span{color:var(--text-faint);}
+  .sub{color:var(--text-dim);font-size:13px;margin:0;}
+
+  /* ---------- WEEK CYCLE ---------- */
+  .cycle{
+    max-width:920px;margin:22px auto 0;
+    background:var(--bg-panel);
+    border:1px solid var(--border);
+    border-radius:14px;
+    padding:14px;
+  }
+  .cycle-label{
+    font-family:'JetBrains Mono',monospace;
+    font-size:10px;letter-spacing:.18em;color:var(--text-faint);
+    margin-bottom:10px;
+  }
+  .cycle-track{display:flex;gap:6px;}
+  .cycle-tab{
+    flex:1;
+    background:var(--bg-panel-alt);
+    border:1px solid var(--border-soft);
+    border-radius:9px;
+    padding:10px 6px;
+    text-align:center;
+    cursor:pointer;
+    transition:.15s;
+    position:relative;
+  }
+  .cycle-tab:hover{border-color:var(--text-faint);}
+  .cycle-tab .wk{font-weight:700;font-size:14px;letter-spacing:.03em;}
+  .cycle-tab .today-dot{
+    display:none;
+    position:absolute;top:-5px;right:-5px;
+    width:10px;height:10px;border-radius:50%;
+    background:var(--c-capital);
+    box-shadow:0 0 8px var(--c-capital);
+  }
+  .cycle-tab.has-today .today-dot{display:block;}
+  .cycle-tab.active{
+    background:linear-gradient(180deg,#1b1e3d,#141731);
+    border-color:var(--c-capital);
+    box-shadow:0 0 0 1px rgba(255,47,109,.25), 0 0 20px -6px rgba(255,47,109,.5);
+  }
+  .cycle-tab.active .wk{color:#fff;}
+  .cycle-tab:not(.active) .wk{color:var(--text-dim);}
+
+  .tz-banner{
+    max-width:920px;margin:12px auto 0;
+    display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+    background:rgba(53,214,224,.08);
+    border:1px solid rgba(53,214,224,.3);
+    border-radius:10px;
+    padding:10px 14px;
+    font-size:12px;color:#a8f0f5;
+  }
+  .tz-banner b{color:#fff;}
+  .tz-banner button{
+    margin-left:auto;background:none;border:1px solid rgba(255,255,255,.25);
+    color:#fff;font-size:10.5px;padding:5px 10px;border-radius:7px;
+    cursor:pointer;font-family:'JetBrains Mono',monospace;
+  }
+
+  .today-banner{
+    max-width:920px;margin:12px auto 0;
+    display:none;
+    align-items:center;gap:10px;
+    background:linear-gradient(90deg, rgba(255,47,109,.14), transparent);
+    border:1px solid rgba(255,47,109,.35);
+    border-radius:10px;
+    padding:10px 14px;
+    font-size:12.5px;
+    color:#ffb9cd;
+  }
+  .today-banner.show{display:flex;}
+  .today-banner b{color:#fff;}
+
+  /* ---------- LEGEND ---------- */
+  .legend{
+    max-width:920px;margin:16px auto 0;
+    display:flex;flex-wrap:wrap;gap:8px;
+  }
+  .chip{
+    display:flex;align-items:center;gap:7px;
+    background:var(--bg-panel);
+    border:1px solid var(--border);
+    padding:7px 12px;border-radius:20px;
+    font-size:12px;cursor:pointer;
+    user-select:none;
+    transition:.15s;
+    color:var(--text-dim);
+  }
+  .chip .dot{width:8px;height:8px;border-radius:50%;flex:none;}
+  .chip.active{color:var(--text);border-color:var(--dot-color, var(--border));background:var(--bg-panel-alt);}
+  .chip.dimmed{opacity:.35;}
+
+  /* ---------- CALENDAR ---------- */
+  .calendar{max-width:920px;margin:18px auto 0;display:flex;flex-direction:column;gap:8px;}
+
+  .day-card{
+    background:var(--bg-panel);
+    border:1px solid var(--border);
+    border-radius:12px;
+    padding:14px 16px;
+    transition:border-color .15s;
+  }
+  .day-card.is-today{
+    border-color:rgba(255,47,109,.5);
+    background:linear-gradient(180deg, rgba(255,47,109,.06), var(--bg-panel) 40%);
+  }
+
+  .day-head{
+    display:flex;align-items:center;justify-content:space-between;
+    margin-bottom:10px;
+  }
+  .day-name{font-weight:700;font-size:15px;letter-spacing:.02em;display:flex;align-items:center;gap:8px;}
+  .today-tag{
+    font-family:'JetBrains Mono',monospace;
+    font-size:9.5px;letter-spacing:.12em;
+    background:var(--c-capital);color:#1a0410;
+    padding:2px 7px;border-radius:5px;font-weight:700;
+  }
+  .day-count{font-size:11px;color:var(--text-faint);font-family:'JetBrains Mono',monospace;}
+
+  /* timeline */
+  .timeline{
+    position:relative;height:22px;
+    margin:4px 2px 14px;
+    border-bottom:1px solid var(--border-soft);
+  }
+  .timeline .tick{
+    position:absolute;bottom:0;width:1px;height:6px;background:var(--border-soft);
+  }
+  .timeline .ticklabel{
+    position:absolute;bottom:8px;font-size:8.5px;color:var(--text-faint);
+    transform:translateX(-50%);font-family:'JetBrains Mono',monospace;
+  }
+  .timeline .evt-dot{
+    position:absolute;bottom:-4px;width:9px;height:9px;border-radius:50%;
+    transform:translateX(-50%);
+    box-shadow:0 0 8px -1px currentColor;
+    transition:opacity .15s;
+    cursor:default;
+  }
+  .timeline .evt-dot.dimmed{opacity:.15;}
+
+  /* event list */
+  .events{display:flex;flex-direction:column;gap:6px;}
+  .evt-row{
+    display:flex;align-items:center;gap:10px;
+    padding:7px 9px;
+    border-radius:8px;
+    background:var(--bg-panel-alt);
+    border:1px solid transparent;
+    transition:.15s;
+    flex-wrap:wrap;
+  }
+  .evt-row.dimmed{opacity:.25;}
+  .evt-row.soon{border-color:rgba(255,179,46,.5);background:rgba(255,179,46,.08);}
+  .evt-swatch{width:6px;align-self:stretch;border-radius:3px;flex:none;}
+  .evt-time-wrap{width:66px;flex:none;line-height:1.25;}
+  .evt-time-local{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:13px;}
+  .evt-time-svt{font-family:'JetBrains Mono',monospace;font-size:9px;color:var(--text-faint);}
+  .day-shift{
+    font-family:'JetBrains Mono',monospace;font-size:8.5px;
+    background:rgba(255,179,46,.15);color:var(--c-droid);
+    padding:1px 5px;border-radius:4px;margin-left:4px;
+    white-space:nowrap;
+  }
+  .evt-delta{
+    font-family:'JetBrains Mono',monospace;font-size:10.5px;
+    width:44px;flex:none;color:var(--text-dim);
+    display:flex;align-items:center;gap:2px;
+  }
+  .evt-label{font-size:13px;font-weight:600;flex:1;min-width:100px;}
+  .evt-countdown{
+    display:none;
+    font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;
+    color:var(--c-droid);
+    background:rgba(255,179,46,.12);
+    padding:4px 8px;border-radius:6px;
+    white-space:nowrap;
+  }
+  .evt-countdown.show{display:inline-flex;align-items:center;gap:4px;}
+
+  /* ---------- NOTES ---------- */
+  .notes{
+    max-width:920px;margin:26px auto 0;
+    background:var(--bg-panel);
+    border:1px solid var(--border);
+    border-radius:14px;
+    overflow:hidden;
+  }
+  .notes-head{
+    display:flex;align-items:center;justify-content:space-between;
+    padding:14px 16px;cursor:pointer;
+  }
+  .notes-head h2{
+    font-size:13px;letter-spacing:.14em;margin:0;
+    font-family:'JetBrains Mono',monospace;color:var(--text-dim);
+  }
+  .notes-head .arrow{transition:.2s;color:var(--text-faint);}
+  .notes.open .notes-head .arrow{transform:rotate(180deg);}
+  .notes-body{
+    max-height:0;overflow:hidden;transition:max-height .25s ease;
+    padding:0 16px;
+  }
+  .notes.open .notes-body{max-height:900px;padding:0 16px 16px;}
+  .note-item{
+    display:flex;gap:10px;
+    padding:10px 0;
+    border-top:1px solid var(--border-soft);
+    font-size:12.5px;color:var(--text-dim);line-height:1.5;
+  }
+  .note-item:first-child{border-top:none;}
+  .note-item .n-dot{width:6px;height:6px;border-radius:50%;margin-top:6px;flex:none;}
+  .note-item b{color:var(--text);}
+
+  .ref-note{
+    max-width:920px;margin:12px auto 0;
+    font-size:11px;color:var(--text-faint);text-align:center;
+    font-family:'JetBrains Mono',monospace;
+  }
+
+  .evt-row.vivid{background:var(--bg-panel);border-color:var(--border-soft);}
+
+  .credit{
+    max-width:920px;margin:22px auto 0;
+    text-align:center;
+    font-family:'JetBrains Mono',monospace;
+    font-size:11px;letter-spacing:.15em;
+    color:var(--text-faint);
+  }
+
+  @media (max-width:480px){
+    .evt-label{font-size:12.5px;}
+    .evt-time-local{font-size:12px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="modal-overlay" id="tzModal">
+  <div class="modal">
+    <div class="eyebrow-m mono">SETUP · STEP 1/1</div>
+    <h2>Choose Your Timezone</h2>
+    <p>So every event time auto-converts to your phone's clock, and the countdowns stay accurate.</p>
+    <div class="detect-card" id="detectCard">
+      <div class="dc-label">✓ AUTO-DETECTED FROM YOUR PHONE</div>
+      <div class="dc-value" id="detectValue">—</div>
+    </div>
+    <div class="or-sep">or choose manually</div>
+    <select id="tzSelect"></select>
+    <button class="btn-confirm" id="tzConfirm">Confirm &amp; Open Schedule</button>
+  </div>
+</div>
+
+<div class="tz-fab" id="tzFab" title="Change timezone">🌐</div>
+
+<div class="header">
+  <div class="eyebrow mono">ALLIANCE OPS</div>
+  <h1>NEXUS <span>PHOENIX</span></h1>
+  <p class="sub">Event Schedule · auto-converts to your timezone · 4-week rotation · live 12h countdown</p>
+</div>
+
+<div class="cycle">
+  <div class="cycle-label mono">ROTATION CYCLE — 4 WEEKS</div>
+  <!-- already English -->
+  <div class="cycle-track" id="cycleTrack"></div>
+</div>
+
+<div class="tz-banner" id="tzBanner"></div>
+
+<div class="today-banner" id="todayBanner"></div>
+
+<div class="legend" id="legend"></div>
+
+<div class="calendar" id="calendar"></div>
+
+<div class="notes" id="notesPanel">
+  <div class="notes-head" id="notesToggle">
+    <h2>IMPORTANT NOTES</h2>
+    <span class="arrow">▾</span>
+  </div>
+  <div class="notes-body">
+    <div class="note-item"><div class="n-dot" style="background:var(--c-resource)"></div><div><b>Server Time.</b> All source times are Server Time (SVT = UTC+8). The number in parentheses is hours before (–) / after (+) the daily reset.</div></div>
+    <div class="note-item"><div class="n-dot" style="background:var(--c-droid)"></div><div><b>Alliance Droid.</b> Rotates between two slots (+1 and +10 from reset) to cover more timezones.</div></div>
+    <div class="note-item"><div class="n-dot" style="background:var(--c-resource)"></div><div><b>Resource Fields.</b> Rotates between reset (0) and +12, so more members get a turn.</div></div>
+    <div class="note-item"><div class="n-dot" style="background:var(--c-supply)"></div><div><b>Resource Types.</b> Rotates per time slot — the same resource appears 2 days in a row, but on different schedules.</div></div>
+    <div class="note-item"><div class="n-dot" style="background:var(--c-capital)"></div><div><b>Timezone &amp; Countdown.</b> Local time &amp; countdown are computed automatically from today's position in the 4-week cycle — still cross-check the Alliance Declaration for the official current week.</div></div>
+  </div>
+</div>
+
+<p class="ref-note" id="refNote"></p>
+
+<div class="credit" id="credit">0x•B🕷️Y</div>
+
+<script>
+const TYPES = {
+  resource: {label:'Resource Fields', hex:'#35d6e0'},
+  droid:    {label:'Alliance Droid: Lancer', hex:'#ffb32e'},
+  silo:     {label:'Silo Event', hex:'#9b6bff'},
+  supply:   {label:'Supply Contest', hex:'#2fe6a0'},
+  capital:  {label:'Capital Contest', hex:'#ff2f6d'},
+};
+
+function ev(time, delta, type){ return {time, delta, type}; }
+
+const week1 = {
+  Monday:    [ev('00:00',0,'resource')],
+  Tuesday:   [ev('01:00',1,'droid'), ev('21:00',-3,'silo'), ev('12:00',12,'resource')],
+  Wednesday: [ev('09:00',9,'supply'), ev('00:00',0,'resource')],
+  Thursday:  [ev('10:00',10,'droid'), ev('12:00',12,'resource')],
+  Friday:    [ev('09:00',9,'supply'), ev('00:00',0,'resource')],
+  Saturday:  [ev('10:00',10,'capital'), ev('01:00',1,'droid'), ev('12:00',12,'resource')],
+  Sunday:    [ev('09:00',9,'supply'), ev('00:00',0,'resource')],
+};
+const week2 = {
+  Monday:    [ev('10:00',10,'droid'), ev('12:00',12,'resource')],
+  Tuesday:   [ev('09:00',9,'supply'), ev('21:00',-3,'silo'), ev('00:00',0,'resource')],
+  Wednesday: [ev('01:00',1,'droid'), ev('12:00',12,'resource')],
+  Thursday:  [ev('09:00',9,'supply'), ev('00:00',0,'resource')],
+  Friday:    [ev('10:00',10,'droid'), ev('12:00',12,'resource')],
+  Saturday:  [ev('10:00',10,'capital'), ev('09:00',9,'supply'), ev('00:00',0,'resource')],
+  Sunday:    [ev('01:00',1,'droid'), ev('12:00',12,'resource')],
+};
+const week3 = {
+  Monday:    [ev('09:00',9,'supply'), ev('00:00',0,'resource')],
+  Tuesday:   [ev('10:00',10,'droid'), ev('21:00',-3,'silo'), ev('12:00',12,'resource')],
+  Wednesday: [ev('09:00',9,'supply'), ev('00:00',0,'resource')],
+  Thursday:  [ev('01:00',1,'droid'), ev('12:00',12,'resource')],
+  Friday:    [ev('09:00',9,'supply'), ev('00:00',0,'resource')],
+  Saturday:  [ev('10:00',10,'capital'), ev('10:00',10,'droid'), ev('12:00',12,'resource')],
+  Sunday:    [ev('09:00',9,'supply'), ev('00:00',0,'resource')],
+};
+const week4 = {
+  Monday:    [ev('01:00',1,'droid'), ev('12:00',12,'resource')],
+  Tuesday:   [ev('09:00',9,'supply'), ev('21:00',-3,'silo'), ev('00:00',0,'resource')],
+  Wednesday: [ev('10:00',10,'droid'), ev('12:00',12,'resource')],
+  Thursday:  [ev('09:00',9,'supply'), ev('00:00',0,'resource')],
+  Friday:    [ev('01:00',1,'droid'), ev('12:00',12,'resource')],
+  Saturday:  [ev('10:00',10,'capital'), ev('09:00',9,'supply'), ev('00:00',0,'resource')],
+  Sunday:    [ev('10:00',10,'droid'), ev('12:00',12,'resource')],
+};
+
+const WEEKS = { 1: week1, 2: week2, 3: week3, 4: week4 };
+const DAYS = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
+
+// Server Time = UTC+8 (confirmed: WIB 23:00 == server reset 00:00 -> UTC+7 +1h = UTC+8)
+// Used only for converting SVT clock-of-day to the viewer's chosen timezone.
+const SERVER_UTC_OFFSET = 8;
+
+// --- ANCHOR CALIBRATION ---
+// The in-game weekday/week counter does NOT line up with the real-world Gregorian
+// weekday via a simple timezone shift (server calendars drift from launch date).
+// So instead of guessing, we calibrate directly from a known real-world instant,
+// using the in-game "Reset Time" countdown (most precise, unambiguous source):
+//   Real time 2026-07-03 19:12:19 UTC (= 2026-07-04 02:12:19 WIB)
+//   Reset Time shown in-game: 20:48:07 remaining
+//   -> in-game clock = 24:00:00 - 20:48:07 = 03:11:53 SVT
+//   -> in-game Week 1, Friday, 03:11:53 SVT
+//   (cross-checked against Supply Contest countdown ~05:51 reported by user,
+//    which computes to 05:48:07 from this anchor -- matches within rounding/delay)
+const CALIBRATION_UTC = Date.UTC(2026,6,3,19,12,19);
+const CALIBRATION_WEEK = 1;
+const CALIBRATION_DAY_INDEX = 4; // Friday (Monday=0)
+const CALIBRATION_SVT_MS = (3*3600 + 11*60 + 53) * 1000; // 03:11:53 SVT
+
+const CYCLE_MS = 28*86400000;
+const calibrationCyclePos = ((CALIBRATION_WEEK-1)*7 + CALIBRATION_DAY_INDEX) * 86400000 + CALIBRATION_SVT_MS;
+const ANCHOR_MONDAY_UTC = CALIBRATION_UTC - calibrationCyclePos;
+
+let viewerOffsetHours = null;
+let activeWeek = 1;
+let activeFilter = null;
+let countdownRegistry = [];
+
+function getCyclePosition(){
+  const diff = Date.now() - ANCHOR_MONDAY_UTC;
+  const pos = ((Math.floor(diff/86400000) % 28)+28)%28;
+  return { week: Math.floor(pos/7)+1, dayIndex: pos%7 };
+}
+const CURRENT = getCyclePosition();
+const CURRENT_WEEK = CURRENT.week;
+const CURRENT_DAY = DAYS[CURRENT.dayIndex];
+
+/* ---------------- TIMEZONE MODAL ---------------- */
+const TZ_LIST = [
+  [-12,'UTC-12 — Baker Island'],[-11,'UTC-11 — Samoa'],[-10,'UTC-10 — Hawaii'],
+  [-9,'UTC-9 — Alaska'],[-8,'UTC-8 — Los Angeles, Vancouver'],[-7,'UTC-7 — Denver, Calgary'],
+  [-6,'UTC-6 — Chicago, Mexico City'],[-5,'UTC-5 — New York, Toronto'],[-4,'UTC-4 — Santiago, Caracas'],
+  [-3,'UTC-3 — São Paulo, Buenos Aires'],[-2,'UTC-2 — Mid-Atlantic'],[-1,'UTC-1 — Azores'],
+  [0,'UTC+0 — London, Lisbon'],[1,'UTC+1 — Paris, Berlin, Lagos'],[2,'UTC+2 — Cairo, Johannesburg'],
+  [3,'UTC+3 — Moscow, Riyadh, Nairobi'],[3.5,'UTC+3:30 — Tehran'],[4,'UTC+4 — Dubai, Baku'],
+  [4.5,'UTC+4:30 — Kabul'],[5,'UTC+5 — Karachi, Tashkent'],[5.5,'UTC+5:30 — India, Sri Lanka'],
+  [5.75,'UTC+5:45 — Nepal'],[6,'UTC+6 — Dhaka, Almaty'],[6.5,'UTC+6:30 — Yangon'],
+  [7,'UTC+7 — WIB: Jakarta, Bangkok, Hanoi'],[8,'UTC+8 — WITA: Bali, Singapore, Manila, Beijing'],
+  [9,'UTC+9 — WIT: Jayapura, Tokyo, Seoul'],[9.5,'UTC+9:30 — Adelaide'],
+  [10,'UTC+10 — Sydney, Port Moresby'],[11,'UTC+11 — Solomon Islands'],
+  [12,'UTC+12 — Auckland, Fiji'],[13,'UTC+13 — Tonga'],[14,'UTC+14 — Kiribati'],
+];
+
+function detectedOffset(){ return -new Date().getTimezoneOffset()/60; }
+function offsetLabel(o){ const s=o>=0?'+':''; return `UTC${s}${o}`; }
+
+function setupModal(){
+  const det = detectedOffset();
+  let closest = TZ_LIST[0][0], bestDiff = Infinity;
+  TZ_LIST.forEach(([v])=>{ const d=Math.abs(v-det); if(d<bestDiff){bestDiff=d; closest=v;} });
+  document.getElementById('detectValue').textContent = offsetLabel(det) + (Math.abs(det-closest)<0.01 ? '' : ' (≈ '+offsetLabel(closest)+')');
+
+  const select = document.getElementById('tzSelect');
+  select.innerHTML = TZ_LIST.map(([v,label])=>`<option value="${v}" ${v===closest?'selected':''}>${label}</option>`).join('');
+
+  document.getElementById('detectCard').onclick = ()=> confirmTz(det);
+  document.getElementById('tzConfirm').onclick = ()=> confirmTz(parseFloat(select.value));
+}
+
+function confirmTz(offset){
+  viewerOffsetHours = offset;
+  document.getElementById('tzModal').classList.add('hide');
+  render();
+  startCountdownLoop();
+}
+
+document.getElementById('tzFab').onclick = ()=>{
+  document.getElementById('tzModal').classList.remove('hide');
+};
+
+/* ---------------- TIME CONVERSION ---------------- */
+function timeToPct(t){
+  const [h,m] = t.split(':').map(Number);
+  return ((h*60+m)/1440)*100;
+}
+
+function convertToViewer(dayIndex, timeStr){
+  const [h,m] = timeStr.split(':').map(Number);
+  const serverTotalMin = dayIndex*1440 + h*60 + m;
+  const diffMin = (viewerOffsetHours - SERVER_UTC_OFFSET)*60;
+  const viewerTotalMin = serverTotalMin + diffMin;
+  const viewerDayRaw = Math.floor(viewerTotalMin/1440);
+  const minOfDay = ((viewerTotalMin%1440)+1440)%1440;
+  const localDayIndex = ((viewerDayRaw%7)+7)%7;
+  const shift = viewerDayRaw - dayIndex;
+  const hh = String(Math.floor(minOfDay/60)).padStart(2,'0');
+  const mm = String(minOfDay%60).padStart(2,'0');
+  return { localTime: `${hh}:${mm}`, localDayIndex, shift };
+}
+
+function deltaText(d){
+  if(d===0) return {txt:'RESET', arrow:'◆'};
+  if(d>0) return {txt:'+'+d, arrow:'▲'};
+  return {txt:d, arrow:'▼'};
+}
+
+/* ---------------- COUNTDOWN ---------------- */
+function occurrenceUTC(week, dayIndex, timeStr){
+  const [h,m] = timeStr.split(':').map(Number);
+  const offsetDays = (week-1)*7 + dayIndex;
+  return ANCHOR_MONDAY_UTC + offsetDays*86400000 + h*3600000 + m*60000;
+}
+function nextOccurrence(week, dayIndex, timeStr){
+  const base = occurrenceUTC(week, dayIndex, timeStr);
+  const now = Date.now();
+  let k = Math.ceil((now-base)/CYCLE_MS);
+  let occ = base + k*CYCLE_MS;
+  if(occ < now) occ += CYCLE_MS;
+  return occ;
+}
+function fmtCountdown(ms){
+  const totalSec = Math.max(0, Math.floor(ms/1000));
+  const h = Math.floor(totalSec/3600);
+  const m = Math.floor((totalSec%3600)/60);
+  const s = totalSec%60;
+  return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+}
+function updateCountdowns(){
+  const now = Date.now();
+  countdownRegistry.forEach(item=>{
+    const remain = item.occ - now;
+    if(remain <= 12*3600000){
+      item.el.classList.add('show');
+      item.row.classList.add('soon');
+      item.el.textContent = '⏳ ' + fmtCountdown(remain);
+      if(remain<=0){ item.occ = nextOccurrence(item.week, item.dayIndex, item.time); }
+    } else {
+      item.el.classList.remove('show');
+      item.row.classList.remove('soon');
+    }
+  });
+}
+let countdownInterval = null;
+function startCountdownLoop(){
+  if(countdownInterval) clearInterval(countdownInterval);
+  updateCountdowns();
+  countdownInterval = setInterval(updateCountdowns, 1000);
+}
+
+/* ---------------- RENDER ---------------- */
+function buildCycleTabs(){
+  const track = document.getElementById('cycleTrack');
+  track.innerHTML = '';
+  [1,2,3,4].forEach(w=>{
+    const tab = document.createElement('div');
+    tab.className = 'cycle-tab' + (w===activeWeek?' active':'') + (w===CURRENT_WEEK?' has-today':'');
+    tab.innerHTML = `<div class="wk">WEEK ${w}</div><div class="today-dot"></div>`;
+    tab.onclick = ()=>{ activeWeek = w; render(); };
+    track.appendChild(tab);
+  });
+}
+
+function buildLegend(){
+  const legend = document.getElementById('legend');
+  legend.innerHTML = '';
+  Object.entries(TYPES).forEach(([key,t])=>{
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (activeFilter===key?' active':'') + (activeFilter && activeFilter!==key?' dimmed':'');
+    chip.style.setProperty('--dot-color', t.hex);
+    chip.innerHTML = `<span class="dot" style="background:${t.hex}"></span>${t.label}`;
+    chip.onclick = ()=>{ activeFilter = (activeFilter===key)? null : key; render(); };
+    legend.appendChild(chip);
+  });
+}
+
+function buildTzBanner(){
+  const el = document.getElementById('tzBanner');
+  el.innerHTML = `🌐 Showing times in <b>${offsetLabel(viewerOffsetHours)}</b> · Server Time = <b>UTC+8</b> <button id="tzChangeBtn">CHANGE</button>`;
+  document.getElementById('tzChangeBtn').onclick = ()=> document.getElementById('tzModal').classList.remove('hide');
+}
+
+function buildCalendar(){
+  const cal = document.getElementById('calendar');
+  cal.innerHTML = '';
+  countdownRegistry = [];
+  const data = WEEKS[activeWeek];
+
+  DAYS.forEach((day,dayIndex)=>{
+    const events = [...data[day]].sort((a,b)=> a.time.localeCompare(b.time));
+    const isToday = activeWeek===CURRENT_WEEK && day===CURRENT_DAY;
+
+    const card = document.createElement('div');
+    card.className = 'day-card' + (isToday?' is-today':'');
+
+    const head = document.createElement('div');
+    head.className = 'day-head';
+    head.innerHTML = `<div class="day-name">${day} ${isToday?'<span class="today-tag">TODAY</span>':''}</div>
+                       <div class="day-count mono">${events.length} EVENT${events.length>1?'S':''}</div>`;
+    card.appendChild(head);
+
+    const tl = document.createElement('div');
+    tl.className = 'timeline';
+    [0,6,12,18,24].forEach(h=>{
+      const pct = (h/24)*100;
+      const tick = document.createElement('div');
+      tick.className='tick'; tick.style.left=pct+'%';
+      tl.appendChild(tick);
+      const lbl = document.createElement('div');
+      lbl.className='ticklabel'; lbl.style.left=pct+'%';
+      lbl.textContent = String(h).padStart(2,'0');
+      tl.appendChild(lbl);
+    });
+    events.forEach(e=>{
+      const dot = document.createElement('div');
+      const dim = activeFilter && activeFilter!==e.type;
+      const dotColor = isToday ? TYPES[e.type].hex : 'var(--neutral)';
+      dot.className = 'evt-dot'+(dim?' dimmed':'');
+      dot.style.left = timeToPct(e.time)+'%';
+      dot.style.background = dotColor;
+      dot.style.color = dotColor;
+      dot.title = `${e.time} SVT · ${TYPES[e.type].label}`;
+      tl.appendChild(dot);
+    });
+    card.appendChild(tl);
+
+    const list = document.createElement('div');
+    list.className = 'events';
+    events.forEach(e=>{
+      const d = deltaText(e.delta);
+      const dim = activeFilter && activeFilter!==e.type;
+      const loc = convertToViewer(dayIndex, e.time);
+      const rowColor = isToday ? TYPES[e.type].hex : 'var(--text)';
+      const row = document.createElement('div');
+      row.className = 'evt-row'+(dim?' dimmed':'')+(isToday?' vivid':'');
+      row.innerHTML = `
+        <div class="evt-swatch" style="background:${isToday ? TYPES[e.type].hex : 'var(--neutral)'}"></div>
+        <div class="evt-time-wrap">
+          <div class="evt-time-local">${loc.localTime}${loc.shift!==0?`<span class="day-shift">${loc.shift>0?'+':''}${loc.shift}d</span>`:''}</div>
+          <div class="evt-time-svt">SVT ${e.time}</div>
+        </div>
+        <div class="evt-delta">${d.arrow} ${d.txt}</div>
+        <div class="evt-label" style="color:${rowColor}">${TYPES[e.type].label}</div>
+        <div class="evt-countdown"></div>`;
+      list.appendChild(row);
+
+      const cdEl = row.querySelector('.evt-countdown');
+      const occ = nextOccurrence(activeWeek, dayIndex, e.time);
+      countdownRegistry.push({el:cdEl, row, occ, week:activeWeek, dayIndex, time:e.time});
+    });
+    card.appendChild(list);
+
+    cal.appendChild(card);
+  });
+
+  const banner = document.getElementById('todayBanner');
+  if(activeWeek===CURRENT_WEEK){
+    banner.classList.add('show');
+    banner.innerHTML = `📍 <span><b>Week ${CURRENT_WEEK} · ${CURRENT_DAY}</b> detected as today — still cross-check against the Alliance Declaration.</span>`;
+  } else {
+    banner.classList.remove('show');
+  }
+
+  document.getElementById('refNote').textContent = `CURRENT CYCLE POSITION — WEEK ${CURRENT_WEEK} · ${CURRENT_DAY.toUpperCase()}`;
+
+  updateCountdowns();
+}
+
+function render(){
+  buildTzBanner();
+  buildCycleTabs();
+  buildLegend();
+  buildCalendar();
+}
+
+document.getElementById('notesToggle').onclick = ()=>{
+  document.getElementById('notesPanel').classList.toggle('open');
+};
+
+activeWeek = CURRENT_WEEK;
+setupModal();
+</script>
+</body>
+</html>
